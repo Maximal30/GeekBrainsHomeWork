@@ -2,7 +2,6 @@ package lesson1;
 
 public class lesson1 {
 
-
     //Задание 1
 
     public static void main(String[] args) {
