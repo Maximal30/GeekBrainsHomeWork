@@ -1,7 +1,6 @@
-package lesson1;
+package lessons;
 
 public class lesson1 {
-
 
     //Задание 1
 
