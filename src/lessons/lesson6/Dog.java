@@ -1,4 +1,4 @@
-package lessons.HomeWork6;
+package lessons.lesson6;
 
 
     class Dog extends Animal {

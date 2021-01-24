@@ -1,4 +1,4 @@
-package lessons.HomeWork7;
+package lessons.lesson7;
 
 /**
  *
