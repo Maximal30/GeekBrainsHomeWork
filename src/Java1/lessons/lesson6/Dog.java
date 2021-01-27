@@ -1,4 +1,4 @@
-package lessons.lesson6;
+package Java1.lessons.lesson6;
 
 
     class Dog extends Animal {
