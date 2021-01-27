@@ -1,4 +1,4 @@
-package lessons.lesson7;
+package Java1.lessons.lesson7;
 
 /**
  *

@@ -1,4 +1,4 @@
-package lessons;
+package Java1.lessons;
 
 public class lesson1 {
 

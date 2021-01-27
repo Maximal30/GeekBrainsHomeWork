@@ -1,4 +1,4 @@
-package lessons.lesson8;
+package Java1.lessons.lesson8;
 
 public class Player extends AGamer {
 
