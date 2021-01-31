@@ -1,4 +1,4 @@
-package Java2.lessons.lesson2.phone;
+package Java2.lessons.lesson3.phone;
 
 public class MainClass {
     public static void main(String[] args){
