@@ -1,4 +1,4 @@
-package Java2.lessons;
+package Java2.lessons.lesson1;
 
 public class Robot implements JumpableRunnable {
     int maxHeight;
