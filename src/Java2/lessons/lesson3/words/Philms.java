@@ -1,4 +1,4 @@
-package Java2.lessons.lesson2.words;
+package Java2.lessons.lesson3.words;
 
 import java.util.*;
 
