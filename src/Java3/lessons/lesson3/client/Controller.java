@@ -1,26 +1,36 @@
 package Java3.lessons.lesson3.client;
 
 import javafx.application.Platform;
+import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
+import javafx.geometry.Pos;
 import javafx.scene.control.*;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.HBox;
-import Java3.lessons.lesson3.server.AuthService;
-
+import javafx.scene.layout.VBox;
 import java.io.*;
 import java.net.Socket;
-import java.util.ArrayList;
-import java.util.List;
+
 
 public class Controller {
-    @FXML
-    TextArea textArea;
+
 
     @FXML
     TextField textField;
 
     @FXML
-    Button btn1;
+    TextField newLoginField;
+
+    @FXML
+    TextField newNickFiled;
+
+    @FXML
+    TextField newPasswordField;
+    @FXML
+    TextField loginField;
+
+    @FXML
+    TextField passwordField;
 
     @FXML
     HBox bottomPanel;
@@ -29,35 +39,31 @@ public class Controller {
     HBox upperPanel;
 
     @FXML
-    HBox registredPanel;
+    HBox welcomePanel;
 
     @FXML
-    TextField loginField;
+    HBox loginPanel;
 
     @FXML
-    TextField passwordField;
-
-    @FXML
-    TextField regLogin;
-
-    @FXML
-    PasswordField regPassword;
-
-    @FXML
-    TextField regNick;
+    HBox regPanel;
 
     @FXML
     ListView<String> clientList;
 
-    private boolean isAuthorized;
+    @FXML
+    ListView<VBox> textArea;
 
-    private void setAuthorized(boolean isAuthorized) {
+
+    private boolean isAuthorized;
+    private int index = 0;
+    private String myNick;
+    private boolean inRegMode;
+
+    public void setAuthorized(boolean isAuthorized) {
         this.isAuthorized = isAuthorized;
-        if (!isAuthorized) {
+        if(!isAuthorized) {
             upperPanel.setVisible(true);
             upperPanel.setManaged(true);
-            registredPanel.setVisible(true);
-            registredPanel.setManaged(true);
             bottomPanel.setVisible(false);
             bottomPanel.setManaged(false);
             clientList.setVisible(false);
@@ -65,46 +71,105 @@ public class Controller {
         } else {
             upperPanel.setVisible(false);
             upperPanel.setManaged(false);
-            registredPanel.setVisible(false);
-            registredPanel.setManaged(false);
+            regPanel.setVisible(false);
+            regPanel.setManaged(false);
             bottomPanel.setVisible(true);
             bottomPanel.setManaged(true);
+            loginPanel.setVisible(false);
+            loginPanel.setManaged(false);
             clientList.setVisible(true);
             clientList.setManaged(true);
         }
     }
+    public void cancelReg() {
+        inRegMode = false;
+        welcomePanel.setVisible(true);
+        welcomePanel.setManaged(true);
+        regPanel.setVisible(false);
+        regPanel.setManaged(false);
+        loginPanel.setVisible(false);
+        loginPanel.setManaged(false);
+    }
 
-    private Socket socket;
-    private DataInputStream in;
-    private DataOutputStream out;
+    public void showLoginPanel() {
+        welcomePanel.setVisible(false);
+        welcomePanel.setManaged(false);
+        regPanel.setVisible(false);
+        regPanel.setManaged(false);
+        loginPanel.setVisible(true);
+        loginPanel.setManaged(true);
+    }
 
-    private final String IP_ADRESS = "localhost";
-    private final int PORT = 8189;
+    public void showRegPanel() {
+        inRegMode = true;
+        welcomePanel.setVisible(false);
+        welcomePanel.setManaged(false);
+        loginPanel.setVisible(false);
+        loginPanel.setManaged(false);
+        regPanel.setVisible(true);
+        regPanel.setManaged(true);
+    }
 
-    private void connect() {
+    public void cancelAuth() {
+        welcomePanel.setVisible(true);
+        welcomePanel.setManaged(true);
+        loginPanel.setVisible(false);
+        loginPanel.setManaged(false);
+        regPanel.setVisible(false);
+        regPanel.setManaged(false);
+    }
+
+    Socket socket;
+    DataInputStream in;
+    DataOutputStream out;
+
+    final String IP_ADRESS = "localhost";
+    final int PORT = 8189;
+
+    public void connect() {
+
         try {
             socket = new Socket(IP_ADRESS, PORT);
-
             in = new DataInputStream(socket.getInputStream());
             out = new DataOutputStream(socket.getOutputStream());
-
             new Thread(new Runnable() {
                 @Override
                 public void run() {
                     try {
+                        if (inRegMode) {
+                            while (true) {
+                                String str = in.readUTF();
+                                if (str.startsWith("/regOk")) {
+                                    inRegMode = false;
+                                    showLoginPanel();
+                                    addText("Успешно зарегистирован!");
+                                    break;
+                                } else {
+                                    addText(str);
+                                }
+                                if (!inRegMode) {
+                                    break;
+                                }
+                            }
+                        }
                         while (true) {
                             String str = in.readUTF();
                             if (str.startsWith("/authok")) {
                                 setAuthorized(true);
+                                String[] tokens = str.split(" ");
+                                myNick = tokens[1];
                                 loadHistory();
                                 break;
                             } else {
-                                textArea.appendText(str + "\n");
+                                addText(str);
                             }
                         }
-
                         while (true) {
                             String str = in.readUTF();
+                            if (str.startsWith("/newNick")) {
+                                String[] tokens = str.split(" ");
+                                myNick = tokens[1];
+                            }
                             if (str.equals("/serverclosed")) break;
                             if (str.startsWith("/clientlist")) {
                                 String[] tokens = str.split(" ");
@@ -118,8 +183,8 @@ public class Controller {
                                     }
                                 });
                             } else {
-                                textArea.appendText(str + "\n");
-                                SaveHistory();
+                                addText(str);
+                                saveHistory(str);
                             }
                         }
 
@@ -140,10 +205,10 @@ public class Controller {
         }
     }
 
-    void Dispose() {
+    public void Dispose() {
         System.out.println("Отправляем сообщение о закрытии");
         try {
-            if (out != null) {
+            if(out != null) {
                 out.writeUTF("/end");
             }
         } catch (IOException e) {
@@ -159,15 +224,15 @@ public class Controller {
         } catch (IOException e) {
             e.printStackTrace();
         }
+
     }
 
-    public void tryToAuth() {
-        if (socket == null || socket.isClosed()) {
+    public void tryToAuth(ActionEvent actionEvent) {
+        if(socket == null || socket.isClosed()) {
             connect();
         }
         try {
-            int hash = passwordField.getText().hashCode();
-            out.writeUTF("/auth " + loginField.getText() + " " + hash);
+            out.writeUTF("/auth " + loginField.getText() + " " + passwordField.getText());
             loginField.clear();
             passwordField.clear();
         } catch (IOException e) {
@@ -175,61 +240,88 @@ public class Controller {
         }
     }
 
-    public void registration() {
-        if (socket == null || socket.isClosed()) {
+    public void selectClient(MouseEvent mouseEvent) {
+        if(mouseEvent.getClickCount() == 2) {
+            textField.setText(textField.getText() + " " + clientList.getSelectionModel().getSelectedItem());
+        }
+    }
+
+    public void tryToReg() {
+        if(socket == null || socket.isClosed()) {
             connect();
         }
-        AuthService.setNewUsers(regLogin.getText(), regPassword.getText(), regNick.getText());
-        System.out.println("Поздравляем с успешной регистрацией.\nВойдите через форму авторизации. ");
-        regLogin.clear();
-        regPassword.clear();
-        regNick.clear();
-    }
-
-    public void selectClient(MouseEvent mouseEvent) {
-        if (mouseEvent.getClickCount() == 2) {
-            System.out.println("Двойной клик");
-        }
-    }
-
-    private void SaveHistory() throws IOException {
         try {
-            File history = new File("history.txt");
-            if (!history.exists()) {
-                System.out.println("Файла истории нет,создадим его");
-                history.createNewFile();
-            }
-            PrintWriter fileWriter = new PrintWriter(new FileWriter(history, false));
-
-            BufferedWriter bufferedWriter = new BufferedWriter(fileWriter);
-            bufferedWriter.write(textArea.getText());
-            bufferedWriter.close();
-
+            out.writeUTF("/reg " + newLoginField.getText() + " " + newNickFiled.getText() + " " + newPasswordField.getText());
+            newLoginField.clear();
+            newNickFiled.clear();
+            passwordField.clear();
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
-    private void loadHistory() throws IOException {
-        int posHistory = 100;
-        File history = new File("history.txt");
-        List<String> historyList = new ArrayList<>();
-        FileInputStream in = new FileInputStream(history);
-        BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(in));
 
-        String temp;
-        while ((temp = bufferedReader.readLine()) != null) {
-            historyList.add(temp);
-        }
+    private void addText (String msg) {
+        Platform.runLater(new Runnable() {
+            @Override public void run() {
+                Label label = new Label(msg + "\n");
+                VBox vBox = new VBox();
+                if (myNick != null) {
+                    if(msg.startsWith(myNick)) {
+                        vBox.setAlignment(Pos.TOP_RIGHT);
+                    } else {
+                        vBox.setAlignment(Pos.TOP_LEFT);
+                    }
+                } else {
+                    vBox.setAlignment(Pos.TOP_LEFT);
+                }
+                vBox.getChildren().add(label);
+                textArea.getItems().add(vBox);
+                textArea.scrollTo(textArea.getItems().size() - 1);
 
-        if (historyList.size() > posHistory) {
-            for (int i = historyList.size() - posHistory; i <= (historyList.size() - 1); i++) {
-                textArea.appendText(historyList.get(i) + "\n");
             }
-        } else {
-            for (int i = 0; i < posHistory; i++) {
-                System.out.println(historyList.get(i));
-            }
+        });
+
+    }
+
+    private void saveHistory(String message) {
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter("res/" + myNick + ".txt", true))) {
+            writer.write(message+"\n");
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }
+
+    private void loadHistory() {
+        int lineCount = 100;
+        File file = new File("res/" + myNick + ".txt");
+        if (!file.exists()) {
+            return;
+        }
+        StringBuilder builder = new StringBuilder();
+        try (RandomAccessFile randomAccessFile = new RandomAccessFile(myNick + ".txt", "r")) {
+            long position = file.length() - 1;
+            randomAccessFile.seek(position);
+            for (long i = position - 1; i >= 0; i--) {
+                randomAccessFile.seek(i);
+                char c = (char) randomAccessFile.read();
+                if (c == '\n') {
+                    lineCount--;
+                    if (lineCount == 0) {
+                        break;
+                    }
+                }
+                builder.append(c);
+            }
+            builder.reverse();
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        String[] tokens = builder.toString().split("\n");
+        for(int i = 0; i < tokens.length; i++) {
+            addText(tokens[i]);
+        }
+    }
+
 }
